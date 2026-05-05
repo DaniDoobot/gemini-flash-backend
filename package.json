@@ -1,0 +1,17 @@
+{
+  "name": "voice-bot-trainer-gemini-runtime",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.13.1",
+    "twilio": "^5.13.1",
+    "wavefile": "^11.0.0",
+    "ws": "^8.20.0"
+  }
+}
