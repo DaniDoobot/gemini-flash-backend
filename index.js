@@ -8,23 +8,7 @@ import pkg from 'wavefile';
 import { getActivePromptRuntimeConfig, pingDb } from './db.js';
 
 const { WaveFile } = pkg;
-const BASE_VOICE_STYLE = `
-ESTILO DE VOZ:
-Habla con tono profesional, sereno y contenido.
-Siempre un tono neutro, nunca hagas high pitch o voz aguda, alta, etc. Sobre todo al final de las frases no lo hagas.
-Habla más despacio de lo habitual, con ritmo pausado.
-No aceleres aunque el usuario hable rápido.
-Usa frases cortas, de máximo 12-15 palabras.
-Evita entusiasmo excesivo, expresiones demasiado alegres o tono infantil.
-Prioriza claridad, calma y seguridad clínica.
-Barge-in: tras el saludo, si el cliente habla, te callas y cedes el turno, aunque estés diciendo una frase predefinida.
-Si el mensaje no tiene sentido, es ruido o no se entiende, dilo y pide repetir más cerca del teléfono.
-Habla siempre en español de España, con pronunciación castellana peninsular neutra.
-Evita seseo, acento latinoamericano, musicalidad caribeña o entonación mexicana.
-Mantén una prosodia adulta, estable y natural.
-No eleves el tono al final de las frases salvo que sea una pregunta real.
-Usa ritmo conversacional, sin dramatizar en exceso.
-`.trim();
+
 const {
   GEMINI_API_KEY,
   GEMINI_MODEL = 'models/gemini-3.1-flash-live-preview',
@@ -38,6 +22,24 @@ if (!GEMINI_API_KEY) {
   console.error('❌ Falta GEMINI_API_KEY');
   process.exit(1);
 }
+
+const BASE_VOICE_STYLE = `
+ESTILO DE VOZ:
+Habla con tono profesional, sereno y contenido.
+Mantén siempre un tono neutro; nunca uses high pitch ni una voz aguda o alta.
+Sobre todo, evita elevar el tono al final de las frases si no es una pregunta real.
+Habla más despacio de lo habitual, con ritmo pausado.
+No aceleres aunque el usuario hable rápido.
+Usa frases cortas, de máximo 12 a 15 palabras.
+Evita entusiasmo excesivo, expresiones demasiado alegres o tono infantil.
+Prioriza claridad, calma y seguridad clínica.
+Barge-in: tras el saludo, si el cliente habla, te callas y cedes el turno, aunque estés diciendo una frase predefinida.
+Si el mensaje no tiene sentido, es ruido o no se entiende, dilo y pide repetir más cerca del teléfono.
+Habla siempre en español de España, con pronunciación castellana peninsular neutra.
+Evita seseo, acento latinoamericano, musicalidad caribeña o entonación mexicana.
+Mantén una prosodia adulta, estable y natural.
+Usa ritmo conversacional, sin dramatizar en exceso.
+`.trim();
 
 function makeAbsUrl(pathname = '/') {
   const host = (PUBLIC_HOST || '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
@@ -245,9 +247,18 @@ wss.on('connection', async (twilioWs, req) => {
     });
   } catch (e) {
     console.error('🛑 No se pudo cargar la configuración activa:', e?.message || e);
-    try { twilioWs.close(); } catch {}
+    try {
+      twilioWs.close();
+    } catch {}
     return;
   }
+
+  const fullSystemPrompt = [
+    BASE_VOICE_STYLE,
+    String(runtimeConfig.base_prompt || '').trim(),
+  ]
+    .filter(Boolean)
+    .join('\n\n=================================================\n\n');
 
   const geminiWs = connectGeminiRealtime();
 
@@ -294,7 +305,7 @@ wss.on('connection', async (twilioWs, req) => {
         systemInstruction: {
           parts: [
             {
-              text: String(runtimeConfig.base_prompt || '').trim(),
+              text: fullSystemPrompt,
             },
           ],
         },
@@ -388,7 +399,9 @@ wss.on('connection', async (twilioWs, req) => {
           activeRecordingSid.delete(callSid);
         }
 
-        try { geminiWs.close(); } catch {}
+        try {
+          geminiWs.close();
+        } catch {}
         return;
       }
     } catch (e) {
@@ -486,7 +499,9 @@ wss.on('connection', async (twilioWs, req) => {
 
   geminiWs.on('close', (code, reason) => {
     console.log('🔌 Gemini WebSocket cerrado:', code, reason?.toString() || 'sin motivo');
-    try { twilioWs.close(); } catch {}
+    try {
+      twilioWs.close();
+    } catch {}
   });
 
   geminiWs.on('error', (err) => {
@@ -495,7 +510,9 @@ wss.on('connection', async (twilioWs, req) => {
 
   twilioWs.on('close', () => {
     console.log('🔌 Twilio WebSocket cerrado');
-    try { geminiWs.close(); } catch {}
+    try {
+      geminiWs.close();
+    } catch {}
   });
 
   twilioWs.on('error', (err) => {
