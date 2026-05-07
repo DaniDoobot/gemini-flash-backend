@@ -116,7 +116,12 @@ async function startRecording(callSid) {
     });
 
     activeRecordingSid.set(callSid, rec.sid);
-    console.log('🎙️ Grabación iniciada:', { recordingSid: rec.sid, callSid });
+
+    console.log('🎙️ Grabación iniciada:', {
+      recordingSid: rec.sid,
+      callSid,
+    });
+
     return { ok: true, sid: rec.sid };
   } catch (e) {
     console.error('🛑 Error iniciando grabación:', e?.message || e);
@@ -203,7 +208,19 @@ app.all('/voice', async (req, res) => {
 });
 
 app.post('/recording-status', async (req, res) => {
-  console.log('🎙️ Recording status:', req.body || {});
+  const body = req.body || {};
+
+  console.log('🎙️ Recording status callback:', {
+    recordingSid: body.RecordingSid,
+    callSid: body.CallSid,
+    recordingStatus: body.RecordingStatus,
+    recordingUrl: body.RecordingUrl,
+    recordingChannels: body.RecordingChannels,
+    recordingTrack: body.RecordingTrack,
+    recordingSource: body.RecordingSource,
+    errorCode: body.ErrorCode,
+  });
+
   res.status(200).send('ok');
 });
 
@@ -350,8 +367,15 @@ wss.on('connection', async (twilioWs, req) => {
         }
 
         if (callSid) {
-          startRecording(callSid).catch(() => {});
+          startRecording(callSid)
+            .then((result) => {
+              console.log('🎙️ Resultado startRecording:', result);
+            })
+            .catch((err) => {
+              console.error('🛑 Excepción en startRecording:', err?.message || err);
+            });
         }
+
         return;
       }
 
